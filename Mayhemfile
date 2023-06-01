@@ -1,8 +1,8 @@
-image: ghcr.io/forallsecure/go-go-fuzz:latest
+image: ghcr.io/jeytuan/quickfix:latest
 duration: 90
 project: quickfix-fuzzing
-target: go-go-fuzz
+target: quickfix_fuzz
 cmds:
-  - cmd: /go/mayhemit.libfuzzer
+  - cmd: /app/quickfix_fuzz
     libfuzzer: true
 

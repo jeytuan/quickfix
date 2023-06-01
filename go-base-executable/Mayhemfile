@@ -1,0 +1,6 @@
+image: jeytuan/go-base-executable:latest 
+duration: 90
+project: mayhem-examples
+target: go-base-executable
+cmds:
+  - cmd: /go/mayhemit @@
