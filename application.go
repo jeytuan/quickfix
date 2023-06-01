@@ -1,41 +1,137 @@
-// Copyright (c) quickfixengine.org  All rights reserved.
-//
-// This file may be distributed under the terms of the quickfixengine.org
-// license as defined by quickfixengine.org and appearing in the file
-// LICENSE included in the packaging of this file.
-//
-// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING
-// THE WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A
-// PARTICULAR PURPOSE.
-//
-// See http://www.quickfixengine.org/LICENSE for licensing information.
-//
-// Contact ask@quickfixengine.org if any conditions of this licensing
-// are not clear to you.
+package main
 
-package quickfix
+import (
+    "bytes"
+    "encoding/json"
+    "fmt"
+    "net/http"
 
-// Application interface should be implemented by FIX Applications.
-// This is the primary interface for processing messages from a FIX Session.
+    "github.com/quickfixgo/quickfix"
+)
+
 type Application interface {
-	// OnCreate notification of a session begin created.
-	OnCreate(sessionID SessionID)
+    OnCreate(sessionID quickfix.SessionID)
+    OnLogon(sessionID quickfix.SessionID)
+    OnLogout(sessionID quickfix.SessionID)
+    ToAdmin(message quickfix.Message, sessionID quickfix.SessionID)
+    FromAdmin(message quickfix.Message, sessionID quickfix.SessionID)
+    ToApp(message quickfix.Message, sessionID quickfix.SessionID)
+    FromApp(message quickfix.Message, sessionID quickfix.SessionID)
+    Fuzz(data []byte) int
+}
 
-	// OnLogon notification of a session successfully logging on.
-	OnLogon(sessionID SessionID)
+type MyApplication struct {
+    // Implement the Application interface
+}
 
-	// OnLogout notification of a session logging off or disconnecting.
-	OnLogout(sessionID SessionID)
+func (app *MyApplication) OnCreate(sessionID quickfix.SessionID) {
+    // Implement the OnCreate method
+}
 
-	// ToAdmin notification of admin message being sent to target.
-	ToAdmin(message *Message, sessionID SessionID)
+func (app *MyApplication) OnLogon(sessionID quickfix.SessionID) {
+    // Implement the OnLogon method
+}
 
-	// ToApp notification of app message being sent to target.
-	ToApp(message *Message, sessionID SessionID) error
+func (app *MyApplication) OnLogout(sessionID quickfix.SessionID) {
+    // Implement the OnLogout method
+}
 
-	// FromAdmin notification of admin message being received from target.
-	FromAdmin(message *Message, sessionID SessionID) MessageRejectError
+func (app *MyApplication) ToAdmin(message quickfix.Message, sessionID quickfix.SessionID) {
+    // Implement the ToAdmin method
+}
 
-	// FromApp notification of app message being received from target.
-	FromApp(message *Message, sessionID SessionID) MessageRejectError
+func (app *MyApplication) FromAdmin(message quickfix.Message, sessionID quickfix.SessionID) {
+    // Implement the FromAdmin method
+}
+
+func (app *MyApplication) ToApp(message quickfix.Message, sessionID quickfix.SessionID) {
+    // Implement the ToApp method
+}
+
+func (app *MyApplication) FromApp(message quickfix.Message, sessionID quickfix.SessionID) {
+    // Implement the FromApp method
+}
+
+func (app *MyApplication) Fuzz(data []byte) int {
+    // Define the input data for the fuzz function
+    request := struct {
+        Username string `json:"username"`
+        Password string `json:"password"`
+    }{
+        Username: "test",
+        Password: "test",
+    }
+
+    // Marshal the input data to JSON
+    jsonData, err := json.Marshal(request)
+    if err!= nil {
+        return 0
+    }
+
+    // Create a new HTTP request with the fuzzed JSON data
+    req, err := http.NewRequest("POST", "/login", bytes.NewBuffer(jsonData))
+    if err!= nil {
+        return 0
+    }
+
+    // Set the headers for the HTTP request
+    req.Header.Set("Content-Type", "application/json")
+
+    // Create a new HTTP client
+    client := &http.Client{}
+
+    // Send the HTTP request and get the response
+    resp, err := client.Do(req)
+    if err!= nil {
+        return 0
+    }
+    defer resp.Body.Close()
+
+    // Check if the response status code is OK
+    if resp.StatusCode!= http.StatusOK {
+        return 0
+    }
+
+    // Read the response body
+    body, err := ioutil.ReadAll(resp.Body)
+    if err!= nil {
+        return 0
+    }
+
+    // Unmarshal the response body to a struct
+    var response struct {
+        Token string `json:"token"`
+    }
+    err = json.Unmarshal(body, &response)
+    if err!= nil {
+        return 0
+    }
+
+    // Check if the token is valid
+    if len(response.Token)!= 32 {
+        return 0
+    }
+
+    // Define the expected output data for the fuzz function
+    expected := struct {
+        Code int    `json:"code"`
+        Msg  string `json:"msg"`
+    }{
+        Code: 200,
+        Msg:  "success",
+    }
+
+    // Marshal the expected output data to JSON
+    expectedJSON, err := json.Marshal(expected)
+    if err!= nil {
+        return 0
+    }
+
+    // Compare the expected output data with the actual output data
+    if!bytes.Equal(body, expectedJSON) {
+        return 0
+    }
+
+    // Return a success status code
+    return 1
 }
